@@ -92,6 +92,8 @@ else{
   res.status(200).json({message:"all the courses",courses})
   });
 
+
+
   // User routes
 router.post('/users/signup', async(req, res) => {
   
@@ -147,6 +149,15 @@ app.post('/users/courses/:courseId', authenticateJwt, async (req, res) => {
     }
   } else {
     res.status(404).json({ message: 'Course not found' });
+  }
+});
+
+app.get('/users/purchasedCourses', authenticateJwt, async (req, res) => {
+  const user = await User.findOne({ username: req.user.username }).populate('purchasedCourses');
+  if (user) {
+    res.json({ purchasedCourses: user.purchasedCourses || [] });
+  } else {
+    res.status(403).json({ message: 'User not found' });
   }
 });
 

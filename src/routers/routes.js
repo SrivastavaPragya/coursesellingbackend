@@ -1,7 +1,7 @@
 const express=require('express')
 const router=new express.Router()
 const {Admin,User,Course} = require("../db/models/Schema");
-
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 
@@ -26,44 +26,69 @@ const authenticateJwt = (req, res, next) => {
   };
 
 
-  router.post('/admin/signup', async(req, res) => {
-    const {username,password}=req.body;
-    const admin= await Admin.findOne({username})
-    if(admin){
-      res.status(403).json({message:"admin already exsists"})
+//   router.post('/admin/signup', async(req, res) => {
+//     const {username,password}=req.body;
+//     const admin= await Admin.findOne({username})
+//     if(admin){
+//       res.status(403).json({message:"admin already exsists"})
       
-    }
-    else{
-      const newAdmin= new Admin({username,password})
-      await newAdmin.save();
-         // Generate JWT Token
-         const token = jwt.sign(
-          { username }, // Payload
-          SECRET, // Secret key - replace with your actual secret key
-          { expiresIn: '1h' } // Token expiration time
-        );
+//     }
+//     else{
+//       const newAdmin= new Admin({username,password})
+//       await newAdmin.save();
+//          // Generate JWT Token
+//          const token = jwt.sign(
+//           { username }, // Payload
+//           SECRET, // Secret key - replace with your actual secret key
+//           { expiresIn: '1h' } // Token expiration time
+//         );
     
-        res.status(200).json({ message: "Admin created successfully", token });
-    }
-  });
+//         res.status(200).json({ message: "Admin created successfully", token });
+//     }
+//   });
 
-  router.post('/admin/login',async(req,res)=>{
-const{username,password}=req.headers;
-const admin= await Admin.findOne({username,password})
-if(admin){
-  const token=jwt.sign(
-    {username},
-    SECRET,
-    {expiresIn:'1h'}
+//   router.post('/admin/login',async(req,res)=>{
+// const{username,password}=req.headers;
+// const admin= await Admin.findOne({username,password})
+// if(admin){
+//   const token=jwt.sign(
+//     {username},
+//     SECRET,
+//     {expiresIn:'1h'}
 
-  )
-  res.status(200).json({message:"Admin logged in succesfully",token})
-}
-else{
-  res.status(403).json({message:"Invlaid username,password"})
-}
+//   )
+//   res.status(200).json({message:"Admin logged in succesfully",token})
+// }
+// else{
+//   res.status(403).json({message:"Invlaid username,password"})
+// }
 
-  })
+//   })
+
+router.post('/admin/signup', async (req, res) => {
+  const { username, password } = req.body;
+  const admin = await Admin.findOne({ username });
+  if (admin) {
+      res.status(403).json({ message: "Admin already exists" });
+  } else {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newAdmin = new Admin({ username, password: hashedPassword });
+      await newAdmin.save();
+      const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
+      res.status(200).json({ message: "Admin created successfully", token });
+  }
+});
+
+router.post('/admin/login', async (req, res) => {
+  const { username, password } = req.headers;
+  const admin = await Admin.findOne({ username });
+  if (admin && await bcrypt.compare(password, admin.password)) {
+      const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
+      res.status(200).json({ message: "Admin logged in successfully", token });
+  } else {
+      res.status(403).json({ message: "Invalid username or password" });
+  }
+});
   
   router.post('/admin/courses', authenticateJwt,async(req,res)=>{
     const{title,description,price,imageLink,published}=req.body
@@ -87,6 +112,20 @@ else{
       res.status(404).json({ message: 'Course not found' });
     }
   });
+
+
+  router.delete('/admin/courses/:courseId', authenticateJwt, async (req, res) => {
+    try {
+        const course = await Course.findByIdAndDelete(req.params.courseId);
+        if (!course) {
+            return res.status(404).json({ message: 'Course not found' });
+        }
+        res.json({ message: 'Course deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting course' });
+    }
+});
+  
   router.get('/admin/courses', authenticateJwt, async (req, res) => {
     const courses = await Course.find({published:true});
   res.status(200).json({message:"all the courses",courses})
@@ -95,47 +134,74 @@ else{
 
 
   // User routes
-router.post('/users/signup', async(req, res) => {
+// router.post('/users/signup', async(req, res) => {
   
-  const {username,password}=req.body
-  const user= await User.findOne({username})
-  if(user){
-    res.status(403).json({message:"user already exsists"})
-  }
+//   const {username,password}=req.body
+//   const user= await User.findOne({username})
+//   if(user){
+//     res.status(403).json({message:"user already exsists"})
+//   }
 
-  const newUser= new User({username,password})
-  await newUser.save()
-  const token = jwt.sign(
-             { username }, // Payload
-             SECRET, // Secret key - replace with your actual secret key
-          { expiresIn: '1h' } // Token expiration time
-       );
-       res.status(200).json({message:"User created",token})
-});
+//   const newUser= new User({username,password})
+//   await newUser.save()
+//   const token = jwt.sign(
+//              { username }, // Payload
+//              SECRET, // Secret key - replace with your actual secret key
+//           { expiresIn: '1h' } // Token expiration time
+//        );
+//        res.status(200).json({message:"User created",token})
+// });
 
-router.post('/users/login',async (req, res) => {
-  const {username,password}=req.headers
-  const user= await User.findOne({username,password})
-  if(user){
-   const token = jwt.sign(
-     { username }, // Payload
-     SECRET, // Secret key - replace with your actual secret key
-     { expiresIn: '1h' } // Token expiration time
+// router.post('/users/login',async (req, res) => {
+//   const {username,password}=req.headers
+//   const user= await User.findOne({username,password})
+//   if(user){
+//    const token = jwt.sign(
+//      { username }, // Payload
+//      SECRET, // Secret key - replace with your actual secret key
+//      { expiresIn: '1h' } // Token expiration time
      
-   );
-   res.status(200).json({message:"logged in successfully",token})
-  }
-  else{
-   res.status(403).json({message:"Invlaid username,password"})
+//    );
+//    res.status(200).json({message:"logged in successfully",token})
+//   }
+//   else{
+//    res.status(403).json({message:"Invlaid username,password"})
+//   }
+// });
+
+
+router.post('/users/signup', async (req, res) => {
+  const { username, password } = req.body;
+  const user = await User.findOne({ username });
+  if (user) {
+      res.status(403).json({ message: "User already exists" });
+  } else {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ username, password: hashedPassword });
+      await newUser.save();
+      const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
+      res.status(200).json({ message: "User created successfully", token });
   }
 });
+
+router.post('/users/login', async (req, res) => {
+  const { username, password } = req.headers;
+  const user = await User.findOne({ username });
+  if (user && await bcrypt.compare(password, user.password)) {
+      const token = jwt.sign({ username }, SECRET, { expiresIn: '1h' });
+      res.status(200).json({ message: "User logged in successfully", token });
+  } else {
+      res.status(403).json({ message: "Invalid username or password" });
+  }
+});
+
 
 router.get('/users/courses', authenticateJwt, async (req, res) => {
   const courses = await Course.find({published: true});
   res.status(200).json({message:"all the courses",courses})
 });
 
-app.post('/users/courses/:courseId', authenticateJwt, async (req, res) => {
+router.post('/users/courses/:courseId', authenticateJwt, async (req, res) => {
   const course = await Course.findById(req.params.courseId);
   console.log(course);
   if (course) {
@@ -152,7 +218,7 @@ app.post('/users/courses/:courseId', authenticateJwt, async (req, res) => {
   }
 });
 
-app.get('/users/purchasedCourses', authenticateJwt, async (req, res) => {
+router.get('/users/purchasedCourses', authenticateJwt, async (req, res) => {
   const user = await User.findOne({ username: req.user.username }).populate('purchasedCourses');
   if (user) {
     res.json({ purchasedCourses: user.purchasedCourses || [] });

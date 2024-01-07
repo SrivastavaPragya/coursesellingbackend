@@ -8,10 +8,13 @@ RUN apt-get install -y nodejs
 
 COPY package.json package.json
 COPY package-lock.json package-lock.json
+
+RUN npm install
+
 COPY routers routers
 COPY db db
 COPY app.js app.js
 
-RUN npm install
+
 
 ENTRYPOINT [ "node", "app.js" ]

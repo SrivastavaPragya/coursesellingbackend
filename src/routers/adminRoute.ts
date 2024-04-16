@@ -1,134 +1,89 @@
-import express from "express"
-const router=express.Router()
-import {Admin,Course} from "../db/models/Schema"
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"
-const SECRET = "SECr3mm";
-import { JWTPayload,authenticateJwt } from "../middleware/auth";
+// import express from "express"
+// const router=express.Router()
+// import {Admin,Course} from "../models/Schema"
+// import bcrypt from "bcryptjs";
+// import jwt from "jsonwebtoken"
+// const SECRET = "SECr3mm";
+// import { JWTPayload,authenticateJwt } from "../middleware/auth";
 
 
-import { Response,Request } from "express";
-
-
-
+// import { Response,Request } from "express";
 
 
 
+//login 
 
-router.post('/signup',async(req:Request,res:Response)=>{
-try{
-    const {email,name,password}=req.body
-    const admin=await  Admin.findOne({email});
-    if(admin){
-      
-        res.status(403).json({message:"Admin Already exsists"})
-    }
-    else{
-         const hashedPassword = await bcrypt.hash(password, 10);
-              const newAdmin = new Admin({ name,email, password: hashedPassword });
-              await newAdmin.save();
-              
-              res.status(200).json({ message: "Admin created successfully"});
-    }
-}
-catch(error){
-    res.status(500).json({ message: "Internal server error"});
-}
+//signup
+
+
+
+
+// post courses
+// router.post('/courses',authenticateJwt,async(req:Request,res:Response)=>{
+
    
-
-})
-
-
-router.post('/login',async(req:Request,res:Response)=>{
-
-    try{
-        const {email ,password}=req.body;
-        const admin=await Admin.findOne({email});
-        if(!admin){
-            return res.status(403).json({ message: "Invalid email or password" });
-        }
-        const isPasswordCorrect=await bcrypt.compare(password,admin.password)
-        if(isPasswordCorrect){
-        const token=jwt.sign({id:admin._id,email:admin.email},SECRET,{expiresIn:'1h'});
-        res.status(200).json({ message: "User logged in successfully", token });
-        }
-        else{
-            res.status(403).json({message:"Invalid username and password"})
-        }
-    }
-    catch(error){
-        res.status(500).json({ message: "Internal server error"});
-    }
     
-})
-
-router.post('/courses',authenticateJwt,async(req:Request,res:Response)=>{
-
-    try{
-        const {title,description,imageLink,price,category,level,type}=req.body;
-
-        const course=await Course.findOne({title})
-        if(course){
-            res.status(403).json({message:"Course already exsists"})
-        }
-        else{
-    const newCourse=new Course({title,description,price,imageLink,category,level,type});
-    await newCourse.save()
-    res.status(200).json({ message: "Course created successfully", courseId: newCourse._id });
-        }
-    }catch (error){
-        res.status(500).json({ message: "Internal server error"});
-    }
-    
-})
-
-router.get('/courses',authenticateJwt,async(req:Request,res:Response)=>{
-
-    const courses=await Course.find();
-    res.status(200).json({message:"all the courses",courses})
-})
+// })
 
 
-router.put('/courses/:courseId', authenticateJwt, async (req: Request, res: Response) => {
-    const { courseId } = req.params;
-    const updates = req.body; 
+//get all courses
 
-    try {
-        
-        const updatedCourse = await Course.findByIdAndUpdate(courseId, updates, { new: true });
+// router.get('/courses',authenticateJwt,async(req:Request,res:Response)=>{
 
-        if (!updatedCourse) {
-            return res.status(404).json({ message: "Course not found" });
-        }
-
-        res.status(200).json({ message: "Course updated successfully", course: updatedCourse });
-    } catch (error) {
-        res.status(500).json({ message: "Internal server error"});
-    }
-});
+   
+// })
 
 
 
-router.delete('/courses/:courseId', authenticateJwt, async (req: Request, res: Response) => {
-    const { courseId } = req.params;
+//update courses
+// router.put('/courses/:courseId', authenticateJwt, async (req: Request, res: Response) => {
+   
+// });
 
-    try {
-        const deletedCourse = await Course.findByIdAndDelete(courseId);
 
-        if (!deletedCourse) {
-          
-            return res.status(404).json({ message: "Course not found" });
-        }
 
-     
-        res.status(200).json({ message: "Course deleted successfully" });
-    } catch (error) {
-      
-        res.status(500).json({ message: "Internal server error"});
-    }
-});
+//delete courses
+
+// router.delete('/courses/:courseId', authenticateJwt, async (req: Request, res: Response) => {
+   
+// });
 
 
 
 
-export default router
+// export default router
+
+
+
+
+import express from "express";
+const router = express.Router();
+import { authenticateJwt } from "../middleware/auth";
+import {
+  CreateCourse,
+  DeleteCourse,
+  GetAllCourses,
+  LogIn,
+  SignUp,
+  UpdateCourse,
+} from "../controllers/AdminController";
+
+//signup route
+router.post("/signup", SignUp);
+
+//login
+router.post("/login", LogIn);
+
+//create course
+router.post("/courses", authenticateJwt, CreateCourse);
+
+//get all courses
+router.get("/courses", authenticateJwt, GetAllCourses);
+
+//update course
+router.put("/courses/:courseId", authenticateJwt, UpdateCourse);
+
+//delete course
+router.delete("/courses/:courseId", authenticateJwt, DeleteCourse);
+
+export default router;
